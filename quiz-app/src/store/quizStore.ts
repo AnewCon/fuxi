@@ -36,6 +36,7 @@ interface QuizState {
   toggleAnswer: (label: string) => void
   submitAnswer: () => void
   nextQuestion: () => void
+  skipQuestion: () => void
   getCurrentQuestion: () => Question | null
   isLastQuestion: () => boolean
   refreshWrongBook: () => void
@@ -82,12 +83,20 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     let pool: Question[]
     if (mode === 'wrong') {
       const wrongList = getWrongQuestions(bankId)
-      const wrongIds = new Set(wrongList.map((w) => w.questionId))
+      // Sort by wrongCount descending (most wrong first)
+      const sorted = [...wrongList].sort((a, b) => b.wrongCount - a.wrongCount)
+      const wrongIds = new Set(sorted.map((w) => w.questionId))
       pool = bank.questions.filter((q) => wrongIds.has(q.id))
+      // Reorder pool to match sorted wrong list order
+      pool.sort((a, b) => {
+        const aIdx = sorted.findIndex(w => w.questionId === a.id)
+        const bIdx = sorted.findIndex(w => w.questionId === b.id)
+        return aIdx - bIdx
+      })
     } else {
       pool = [...bank.questions]
+      pool = shuffleArray(pool)
     }
-    pool = shuffleArray(pool)
 
     // Clear any saved progress when starting fresh
     localStorage.removeItem(PROGRESS_KEY)
@@ -223,6 +232,43 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         submitted: false,
       })
     }
+  },
+
+  skipQuestion: () => {
+    const { getCurrentQuestion, bankId, mode, questionPool, currentIndex } = get()
+    const q = getCurrentQuestion()
+    if (!q || mode !== 'wrong') return
+
+    // Remove from wrong book
+    removeWrongQuestion(bankId, q.id)
+
+    // Remove from current pool
+    const newPool = questionPool.filter((_, idx) => idx !== currentIndex)
+    const newResults = [...get().results, {
+      questionId: q.id,
+      userAnswer: 'SKIPPED',
+      correctAnswer: q.answer,
+      isCorrect: false,
+    }]
+
+    set({
+      questionPool: newPool,
+      results: newResults,
+      selectedAnswers: [],
+      submitted: false,
+    })
+
+    // Save progress
+    const state = get()
+    saveProgress({
+      bankId: state.bankId,
+      mode: state.mode,
+      questionPool: newPool,
+      currentIndex: state.currentIndex,
+      results: newResults,
+    })
+
+    get().refreshWrongBook()
   },
 
   getCurrentQuestion: () => {

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, ArrowRight } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, ArrowRight, Sword } from 'lucide-react'
 import { useQuizStore } from '@/store/quizStore'
-import { getQuestionBank } from '@/utils/storage'
+import { getQuestionBank, getWrongQuestions } from '@/utils/storage'
 
 export default function QuizPage() {
   const navigate = useNavigate()
@@ -15,6 +15,7 @@ export default function QuizPage() {
     toggleAnswer,
     submitAnswer,
     nextQuestion,
+    skipQuestion,
     getCurrentQuestion,
     isLastQuestion,
   } = useQuizStore()
@@ -64,6 +65,12 @@ export default function QuizPage() {
       navigate('/result')
     } else {
       nextQuestion()
+    }
+  }
+
+  const handleSkip = () => {
+    if (confirm('确定要跳过此题吗？此题将从错题库中移除。')) {
+      skipQuestion()
     }
   }
 
@@ -178,8 +185,19 @@ export default function QuizPage() {
           )}
         </div>
 
-        {/* Action Button */}
-        <div className="flex justify-center">
+        {/* Action Buttons */}
+        <div className="flex justify-center items-center gap-3">
+          {/* 斩 button - only in wrong mode */}
+          {mode === 'wrong' && (
+            <button
+              onClick={handleSkip}
+              className="px-5 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center gap-2 shadow-md"
+              title="跳过此题并从错题库中移除"
+            >
+              <Sword className="w-5 h-5" />
+              斩
+            </button>
+          )}
           {!submitted ? (
             <button
               onClick={handleSubmit}
