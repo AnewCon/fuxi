@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, AlertCircle, BarChart3, Upload, Trash2, Edit3, Check, X } from 'lucide-react'
+import { BookOpen, AlertCircle, BarChart3, Upload, Trash2, Edit3, Check, X, RotateCcw, Play } from 'lucide-react'
 import { useQuizStore } from '@/store/quizStore'
 import {
   getQuestionBanks,
@@ -8,6 +8,7 @@ import {
   deleteQuestionBank,
   renameQuestionBank,
   addQuestionBank,
+  getQuestionBank,
   type QuestionBank,
 } from '@/utils/storage'
 import { useState, useEffect, useMemo } from 'react'
@@ -22,10 +23,15 @@ interface BankStats {
 export default function HomePage() {
   const navigate = useNavigate()
   const startQuiz = useQuizStore((s) => s.startQuiz)
+  const resumeQuiz = useQuizStore((s) => s.resumeQuiz)
+  const hasSavedProgress = useQuizStore((s) => s.hasSavedProgress)
+  const clearSavedProgress = useQuizStore((s) => s.clearSavedProgress)
   const [banks, setBanks] = useState<QuestionBank[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [bankStats, setBankStats] = useState<Record<string, BankStats>>({})
+  const [showResumeBanner, setShowResumeBanner] = useState(false)
+  const [savedProgressInfo, setSavedProgressInfo] = useState<{ bankName: string; currentIndex: number; total: number } | null>(null)
 
   useEffect(() => {
     // 初始化默认题库
@@ -63,6 +69,38 @@ export default function HomePage() {
   }, [])
 
   const refreshBanks = () => setBanks(getQuestionBanks())
+
+  // Check for saved progress on mount
+  useEffect(() => {
+    if (hasSavedProgress()) {
+      const raw = localStorage.getItem('quiz_progress')
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw)
+          const bank = getQuestionBank(saved.bankId)
+          if (bank) {
+            setSavedProgressInfo({
+              bankName: bank.name,
+              currentIndex: saved.currentIndex,
+              total: saved.questionIds?.length || 0,
+            })
+            setShowResumeBanner(true)
+          }
+        } catch { /* ignore */ }
+      }
+    }
+  }, [banks])
+
+  const handleResume = () => {
+    resumeQuiz()
+    navigate('/quiz')
+  }
+
+  const handleRestart = () => {
+    clearSavedProgress()
+    setShowResumeBanner(false)
+    setSavedProgressInfo(null)
+  }
 
   const handleStart = (bankId: string, mode: 'full' | 'wrong') => {
     const wrongCount = getWrongQuestions(bankId).length
@@ -121,6 +159,36 @@ export default function HomePage() {
             导入题库
           </button>
         </div>
+
+        {/* Resume Progress Banner */}
+        {showResumeBanner && savedProgressInfo && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-blue-900 text-lg mb-1">继续上次答题</h3>
+                <p className="text-blue-700 text-sm">
+                  题库：{savedProgressInfo.bankName} · 进度：第 {savedProgressInfo.currentIndex + 1} / {savedProgressInfo.total} 题
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleRestart}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  重新开始
+                </button>
+                <button
+                  onClick={handleResume}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-md"
+                >
+                  <Play className="w-4 h-4" />
+                  继续答题
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bank Cards */}
         <div className="space-y-6">
