@@ -1,7 +1,7 @@
 import type { Question, QuestionType } from '@/data/questions'
 
 // ==================== 题库存储 ====================
-const BANKS_KEY = 'quiz_banks_v2'
+const BANKS_KEY = 'quiz_banks_v3'
 
 export interface QuestionBank {
   id: string
