@@ -32,7 +32,7 @@ export default function HomePage() {
     if (existing.length === 0) {
       addQuestionBank({
         id: 'default',
-        name: '思想政治（默认题库）',
+        name: '思政复习题',
         questions: defaultQuestions,
         createdAt: new Date().toISOString(),
       })
@@ -96,7 +96,7 @@ export default function HomePage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-primary mb-3">思想政治期末复习系统</h1>
+          <h1 className="text-4xl font-bold text-primary mb-3">思政复习题</h1>
           <p className="text-gray-600 text-lg">多题库管理 · 智能错题强化</p>
         </div>
 
